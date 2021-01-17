@@ -1,15 +1,21 @@
----
-title: Understanding how GitHub uses and protects your data
-redirect_from:
-  - /categories/understanding-how-github-uses-and-protects-your-data
-versions:
-  free-pro-team: '*'
----
+env=~/.ssh/agent.env
 
+agent_load_env () { test -f "$env" && . "$env" >| /dev/null ; }
 
-### Table of Contents
+agent_start () {
+    (umask 077; ssh-agent >| "$env")
+    . "$env" >| /dev/null ; }
 
-{% link_in_list /about-githubs-use-of-your-data %}
-{% link_in_list /requesting-an-archive-of-your-personal-accounts-data %}
-{% link_in_list /managing-data-use-settings-for-your-private-repository %}
-{% link_in_list /opting-into-or-out-of-the-github-archive-program-for-your-public-repository %}
+agent_load_env
+
+# agent_run_state: 0=agent running w/ key; 1=agent w/o key; 2= agent not running
+agent_run_state=$(ssh-add -l >| /dev/null 2>&1; echo $?)
+
+if [ ! "$SSH_AUTH_SOCK" ] || [ $agent_run_state = 2 ]; then
+    agent_start
+    ssh-add
+elif [ "$SSH_AUTH_SOCK" ] && [ $agent_run_state = 1 ]; then
+    ssh-add
+fi
+
+unset env
